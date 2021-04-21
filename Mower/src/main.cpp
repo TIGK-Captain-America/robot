@@ -1,4 +1,5 @@
 #include <MeAuriga.h>
+#include <Wire.h>
 
 #define STOP '0'
 #define FORWARD '1'
@@ -12,9 +13,12 @@ MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 MeLineFollower lineFinder(PORT_9);
 MeUltrasonicSensor ultraSonic(PORT_10);
+MeGyro gyro(1,0x69);
 
 int sensorState = 0;
 int robotSpeed = 60;
+int angle;
+int angleToSend;
 
 void autoDrive(void) {
     static char b = FORWARD;
@@ -90,6 +94,7 @@ void setup() {
     attachInterrupt(Encoder_1.getIntNum(), isr_process_encoder1, RISING);
     attachInterrupt(Encoder_2.getIntNum(), isr_process_encoder2, RISING);
     Serial.begin(115200);
+    gyro.begin();
     
     //Set PWM 8KHz
     TCCR1A = _BV(WGM10);
@@ -100,49 +105,124 @@ void setup() {
 }
 
 void loop() {
+    gyro.update();
     static char a;
+    static float distance = 0;
+    static int startPos;
+    static char previousState;
 
     if (Serial.available()) {
         a = Serial.read();
         Serial.readString();
-    }
 
     switch(a) {
         case STOP:
+            if (previousState == REVERSE){
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                gyro.update();
+                angle = (gyro.getAngleZ() + 360 % 360);
+                Serial.print(distance);
+                Serial.print(", ");
+                Serial.println(angle);
+            }
+            else if (previousState == FORWARD){
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                gyro.update();
+                angle = (gyro.getAngleZ() + 180);
+                Serial.print(distance);
+                Serial.print(", ");
+                Serial.println(angle);
+            }
             Encoder_1.setTarPWM(0);
             Encoder_2.setTarPWM(0);
+            previousState = STOP;
             break;
         
         case FORWARD:
-            if (ultraSonic.distanceCm() < 30 || lineFinder.readSensors() != 3)
+            if (previousState == REVERSE){
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                gyro.update();
+                angle = (gyro.getAngleZ() + 360 % 360);
+                Serial.print(distance);
+                Serial.print(", ");
+                Serial.println(angle);
+            }   
+            startPos = Encoder_2.getCurPos();
+            if (ultraSonic.distanceCm() < 30)
                 a = STOP;
             else {
                 Encoder_1.setTarPWM(-robotSpeed);
                 Encoder_2.setTarPWM(robotSpeed);
             }
+            previousState = FORWARD;
             break;
         
         case TURN_RIGHT:
+            if (previousState == REVERSE){
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                gyro.update();
+                angle = (gyro.getAngleZ() + 360 % 360);
+                Serial.print(distance);
+                Serial.print(", ");
+                Serial.println(angle);
+            }
+            else if (previousState == FORWARD){
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                gyro.update();
+                angle = (gyro.getAngleZ() + 180);
+                Serial.print(distance);
+                Serial.print(", ");
+                Serial.println(angle);
+            }
             Encoder_1.setTarPWM(robotSpeed);
             Encoder_2.setTarPWM(robotSpeed);
+            previousState = TURN_RIGHT;
             break;
         
         case TURN_LEFT:
+            if (previousState == REVERSE){
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                gyro.update();
+                angle = (gyro.getAngleZ() + 360 % 360);
+                Serial.print(distance);
+                Serial.print(", ");
+                Serial.println(angle);
+            }
+            else if (previousState == FORWARD){
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                gyro.update();
+                angle = (gyro.getAngleZ() + 180);
+                Serial.print(distance);
+                Serial.print(", ");
+                Serial.println(angle);
+            }
             Encoder_1.setTarPWM(-robotSpeed);
             Encoder_2.setTarPWM(-robotSpeed);
+            previousState = TURN_LEFT;
             break;
         
         case REVERSE:
+            if (previousState == FORWARD){
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                gyro.update();
+                angle = (gyro.getAngleZ() + 180);
+                Serial.print(distance);
+                Serial.print(", ");
+                Serial.println(angle);
+            }
+            startPos = Encoder_2.getCurPos();
             Encoder_1.setTarPWM(robotSpeed);
             Encoder_2.setTarPWM(-robotSpeed);
-            break;
-
-        case AUTO:
-            autoDrive();
+            previousState = REVERSE;
             break;
             
         default:
             break;
+    }
+    }
+
+    if (a == AUTO) {
+        autoDrive();
     }
   
   Encoder_1.loop();
