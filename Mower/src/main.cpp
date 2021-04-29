@@ -35,10 +35,11 @@ void autoDrive(void)
             Serial2.print(distance);
             Serial2.print(",");
             Serial2.print(angle);
-            if (ultraSonic.distanceCm() < 30){
-                Serial2.print(",");
-                Serial2.print("S");
-            }
+            Serial2.print(",");
+            if (ultraSonic.distanceCm() < 30)
+                Serial2.print("T");
+            else
+                Serial2.print("F");
             b = REVERSE;
             lineSensor = lineFinder.readSensors();
             startPos = Encoder_2.getCurPos();
@@ -58,6 +59,8 @@ void autoDrive(void)
             Serial2.print(distance);
             Serial2.print(",");
             Serial2.print(angle);
+            Serial2.print(",");
+            Serial2.print("F");
             b = FORWARD;
             count = 0;
             startPos = Encoder_2.getCurPos();
@@ -75,6 +78,8 @@ void autoDrive(void)
             Serial2.print(distance);
             Serial2.print(",");
             Serial2.print(angle);
+            Serial2.print(",");
+            Serial2.print("F");
             b = FORWARD;
             count = 0;
             startPos = Encoder_2.getCurPos();
@@ -158,6 +163,8 @@ void loop()
                 Serial2.print(distance);
                 Serial2.print(",");
                 Serial2.print(angle);
+                Serial2.print(",");
+                Serial2.print("F");
             }
             else if (previousState == FORWARD)
             {
@@ -165,6 +172,8 @@ void loop()
                 Serial2.print(distance);
                 Serial2.print(",");
                 Serial2.print(angle);
+                Serial2.print(",");
+                Serial2.print("F");
             }
             Encoder_1.setMotorPwm(0);
             Encoder_2.setMotorPwm(0);
@@ -179,6 +188,8 @@ void loop()
                 Serial2.print(distance);
                 Serial2.print(",");
                 Serial2.print(angle);
+                Serial2.print(",");
+                Serial2.print("F");
             }
             startPos = Encoder_2.getCurPos();
             Encoder_1.setMotorPwm(-robotSpeed);
@@ -194,6 +205,8 @@ void loop()
                 Serial2.print(distance);
                 Serial2.print(",");
                 Serial2.print(angle);
+                Serial2.print(",");
+                Serial2.print("F");
             }
             else if (previousState == FORWARD)
             {
@@ -201,6 +214,8 @@ void loop()
                 Serial2.print(distance);
                 Serial2.print(",");
                 Serial2.print(angle);
+                Serial2.print(",");
+                Serial2.print("F");
             }
             Encoder_1.setMotorPwm(robotSpeed);
             Encoder_2.setMotorPwm(robotSpeed);
@@ -215,6 +230,8 @@ void loop()
                 Serial2.print(distance);
                 Serial2.print(",");
                 Serial2.print(angle);
+                Serial2.print(",");
+                Serial2.print("F");
             }
             else if (previousState == FORWARD)
             {
@@ -222,6 +239,8 @@ void loop()
                 Serial2.print(distance);
                 Serial2.print(",");
                 Serial2.print(angle);
+                Serial2.print(",");
+                Serial2.print("F");
             }
             Encoder_1.setMotorPwm(-robotSpeed);
             Encoder_2.setMotorPwm(-robotSpeed);
@@ -235,6 +254,8 @@ void loop()
                 Serial2.print(distance);
                 Serial2.print(",");
                 Serial2.print(angle);
+                Serial2.print(",");
+                Serial2.print("F");
             }
             startPos = Encoder_2.getCurPos();
             Encoder_1.setMotorPwm(robotSpeed);
@@ -260,6 +281,8 @@ void loop()
             Serial2.print(distance);
             Serial2.print(",");
             Serial2.print(angle);
+            Serial2.print(",");
+            Serial2.print("F");
         }
         else if (previousState == FORWARD)
         {
@@ -268,7 +291,7 @@ void loop()
             Serial2.print(",");
             Serial2.print(angle);
             Serial2.print(",");
-            Serial2.print("S");
+            Serial2.print("T");
         }
         Encoder_1.setMotorPwm(0);
         Encoder_2.setMotorPwm(0);
