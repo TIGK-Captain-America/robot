@@ -247,6 +247,9 @@ void loop()
         Encoder_2.setMotorPwm(0);
         previousState = STOP;
     }
+
+    Encoder_1.loop();
+    Encoder_2.loop();
 }
 
 void printToRpi(float distance, int angle, bool collisionAvoidance) {
