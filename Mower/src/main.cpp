@@ -20,6 +20,8 @@ int angle;
 int startPos;
 float distance = 0;
 
+void printToRpi(float distance, int angle, bool collisionAvoidance);
+
 void autoDrive(void)
 {
     static char b = FORWARD;
@@ -32,14 +34,10 @@ void autoDrive(void)
         if (ultraSonic.distanceCm() < 30 || lineFinder.readSensors() != 3)
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-            Serial2.print(distance);
-            Serial2.print(",");
-            Serial2.print(angle);
-            Serial2.print(",");
             if (ultraSonic.distanceCm() < 30)
-                Serial2.print("T");
+                printToRpi(distance, angle, true);
             else
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             b = REVERSE;
             lineSensor = lineFinder.readSensors();
             startPos = Encoder_2.getCurPos();
@@ -56,11 +54,7 @@ void autoDrive(void)
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
             angle = (angle + 180) % 360;
-            Serial2.print(distance);
-            Serial2.print(",");
-            Serial2.print(angle);
-            Serial2.print(",");
-            Serial2.print("F");
+            printToRpi(distance, angle, false);
             b = FORWARD;
             count = 0;
             startPos = Encoder_2.getCurPos();
@@ -75,11 +69,7 @@ void autoDrive(void)
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
             angle = (angle + 180) % 360;
-            Serial2.print(distance);
-            Serial2.print(",");
-            Serial2.print(angle);
-            Serial2.print(",");
-            Serial2.print("F");
+            printToRpi(distance, angle, false);
             b = FORWARD;
             count = 0;
             startPos = Encoder_2.getCurPos();
@@ -160,20 +150,12 @@ void loop()
             {
                 distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20; //20 = omkrets på hjul
                 angle = (angle + 180) % 360;
-                Serial2.print(distance);
-                Serial2.print(",");
-                Serial2.print(angle);
-                Serial2.print(",");
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
                 distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-                Serial2.print(distance);
-                Serial2.print(",");
-                Serial2.print(angle);
-                Serial2.print(",");
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(0);
             Encoder_2.setMotorPwm(0);
@@ -185,11 +167,7 @@ void loop()
             {
                 distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 angle = (angle + 180) % 360;
-                Serial2.print(distance);
-                Serial2.print(",");
-                Serial2.print(angle);
-                Serial2.print(",");
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             }
             startPos = Encoder_2.getCurPos();
             Encoder_1.setMotorPwm(-robotSpeed);
@@ -202,20 +180,12 @@ void loop()
             {
                 distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 angle = (angle + 180) % 360;
-                Serial2.print(distance);
-                Serial2.print(",");
-                Serial2.print(angle);
-                Serial2.print(",");
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
                 distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-                Serial2.print(distance);
-                Serial2.print(",");
-                Serial2.print(angle);
-                Serial2.print(",");
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(robotSpeed);
             Encoder_2.setMotorPwm(robotSpeed);
@@ -227,20 +197,12 @@ void loop()
             {
                 distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 angle = (angle + 180) % 360;
-                Serial2.print(distance);
-                Serial2.print(",");
-                Serial2.print(angle);
-                Serial2.print(",");
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
                 distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-                Serial2.print(distance);
-                Serial2.print(",");
-                Serial2.print(angle);
-                Serial2.print(",");
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(-robotSpeed);
             Encoder_2.setMotorPwm(-robotSpeed);
@@ -251,11 +213,7 @@ void loop()
             if (previousState == FORWARD)
             {
                 distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-                Serial2.print(distance);
-                Serial2.print(",");
-                Serial2.print(angle);
-                Serial2.print(",");
-                Serial2.print("F");
+                printToRpi(distance, angle, false);
             }
             startPos = Encoder_2.getCurPos();
             Encoder_1.setMotorPwm(robotSpeed);
@@ -278,23 +236,26 @@ void loop()
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20; //20 = omkrets på hjul
             angle = (angle + 180) % 360;
-            Serial2.print(distance);
-            Serial2.print(",");
-            Serial2.print(angle);
-            Serial2.print(",");
-            Serial2.print("F");
+            printToRpi(distance, angle, false);
         }
         else if (previousState == FORWARD)
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-            Serial2.print(distance);
-            Serial2.print(",");
-            Serial2.print(angle);
-            Serial2.print(",");
-            Serial2.print("T");
+            printToRpi(distance, angle, true);
         }
         Encoder_1.setMotorPwm(0);
         Encoder_2.setMotorPwm(0);
         previousState = STOP;
     }
+}
+
+void printToRpi(float distance, int angle, bool collisionAvoidance) {
+    Serial2.print(distance);
+    Serial2.print(",");
+    Serial2.print(angle);
+    Serial2.print(",");
+    if (collisionAvoidance)
+        Serial2.print("T");
+    else
+        Serial2.print("F");
 }
