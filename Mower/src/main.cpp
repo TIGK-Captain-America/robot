@@ -17,21 +17,28 @@ MeGyro gyro(1, 0x69);
 int sensorState = 0;
 int robotSpeed = 60;
 int angle;
-int startPos;
+int startPos = 0;
 float distance = 0;
+const byte noLineDetection = 3;
+
 
 void printToRpi(float distance, int angle, bool collisionAvoidance);
 
 void autoDrive(void)
 {
     static char b = FORWARD;
-    static int count = 0;
     static int lineSensor;
+    static float wheelTurns = 0;
 
+    /*Serial.print("wheelTurns: ");
+    Serial.println(wheelTurns);
+    Serial.print("Line sensor: ");
+    Serial.println(lineFinder.readSensors());*/
+    wheelTurns = (float(Encoder_2.getCurPos() - startPos) / 360);
     switch (b)
     {
     case FORWARD:
-        if (ultraSonic.distanceCm() < 30 || lineFinder.readSensors() != 3)
+        if (ultraSonic.distanceCm() < 30 || lineFinder.readSensors() != noLineDetection)
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
             if (ultraSonic.distanceCm() < 30)
@@ -47,51 +54,47 @@ void autoDrive(void)
             Encoder_1.setMotorPwm(-robotSpeed + 20);
             Encoder_2.setMotorPwm(robotSpeed - 20);
         }
+        wheelTurns = 0;
         break;
 
     case TURN_RIGHT:
-        if (count >= 3000)
+        if (wheelTurns >= 0.3)
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-            angle = (angle + 180) % 360;
-            printToRpi(distance, angle, false);
             b = FORWARD;
-            count = 0;
+            wheelTurns = 0;
             startPos = Encoder_2.getCurPos();
         }
         Encoder_1.setMotorPwm(robotSpeed);
         Encoder_2.setMotorPwm(robotSpeed);
-        count++;
         break;
 
     case TURN_LEFT:
-        if (count >= 3000)
+        if (wheelTurns <= -0.5)
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-            angle = (angle + 180) % 360;
-            printToRpi(distance, angle, false);
             b = FORWARD;
-            count = 0;
+            wheelTurns = 0;
             startPos = Encoder_2.getCurPos();
         }
         Encoder_1.setMotorPwm(-robotSpeed);
         Encoder_2.setMotorPwm(-robotSpeed);
-        count++;
         break;
 
     case REVERSE:
-        if (count >= 4000 || (lineFinder.readSensors() != 3 && count > 2000))
+        if (wheelTurns <= -1 || (lineFinder.readSensors() != noLineDetection && wheelTurns <= -0.5))
         {
-            if (lineSensor == 1)
+            if (lineSensor == 1) 
                 b = TURN_RIGHT;
-            else
+            else 
                 b = TURN_LEFT;
-
-            count = 0;
+            
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+            angle = (angle + 180) % 360;
+            printToRpi(distance, angle, false);
+            startPos = Encoder_2.getCurPos();
+            wheelTurns = 0;
         }
         Encoder_1.setMotorPwm(robotSpeed);
         Encoder_2.setMotorPwm(-robotSpeed);
-        count++;
         break;
 
     default:
@@ -229,8 +232,9 @@ void loop()
     if (a == AUTO)
     {
         autoDrive();
+        previousState = AUTO;
     }
-    if (ultraSonic.distanceCm() <= 30)
+    if (ultraSonic.distanceCm() <= 30 && previousState != AUTO)
     {
         if (previousState == REVERSE)
         {
