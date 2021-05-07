@@ -35,6 +35,6 @@ Making the mower drive autonomous so no person needs to be present. Communicatin
 6. Make a voltage divider to make UART communication work between the Arduino and the Raspberry Pi.  
 
 ## Mower Diagram
-
+![Mower_Diagram](https://github.com/TIGK-Captain-America/robot/blob/main/WBS_HW.jpg)
 
 
