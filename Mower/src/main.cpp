@@ -21,6 +21,7 @@ int startPos = 0;
 float distance = 0;
 const byte noLineDetection = 3;
 const int collisionAvoidanceDistance = 10;
+const int wheelDiameter = 20;
 
 
 void printToRpi(float distance, int angle, bool collisionAvoidance);
@@ -31,10 +32,6 @@ void autoDrive(void)
     static int lineSensor;
     static float wheelTurns = 0;
 
-    /*Serial.print("wheelTurns: ");
-    Serial.println(wheelTurns);
-    Serial.print("Line sensor: ");
-    Serial.println(lineFinder.readSensors());*/
     wheelTurns = (float(Encoder_2.getCurPos() - startPos) / 360);
     switch (b)
     {
@@ -42,7 +39,7 @@ void autoDrive(void)
         if (ultraSonic.distanceCm() < collisionAvoidanceDistance || lineFinder.readSensors() != noLineDetection)
 
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
             if (ultraSonic.distanceCm() < collisionAvoidanceDistance)
                 printToRpi(distance, angle, true);
             else
@@ -89,7 +86,7 @@ void autoDrive(void)
             else 
                 b = TURN_LEFT;
             
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
             angle = (angle + 180) % 360;
             printToRpi(distance, angle, false);
             startPos = Encoder_2.getCurPos();
@@ -153,13 +150,13 @@ void loop()
         case STOP:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20; //20 = omkrets på hjul
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter; 
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(0);
@@ -170,7 +167,7 @@ void loop()
         case FORWARD:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
@@ -183,13 +180,13 @@ void loop()
         case TURN_RIGHT:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(robotSpeed);
@@ -200,13 +197,13 @@ void loop()
         case TURN_LEFT:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(-robotSpeed);
@@ -217,7 +214,7 @@ void loop()
         case REVERSE:
             if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 printToRpi(distance, angle, false);
             }
             startPos = Encoder_2.getCurPos();
@@ -240,13 +237,13 @@ void loop()
     {
         if (previousState == REVERSE)
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20; //20 = omkrets på hjul
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter; 
             angle = (angle + 180) % 360;
             printToRpi(distance, angle, false);
         }
         else if (previousState == FORWARD)
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
             printToRpi(distance, angle, true);
         }
         Encoder_1.setMotorPwm(0);
