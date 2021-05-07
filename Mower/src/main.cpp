@@ -39,6 +39,7 @@ void autoDrive(void)
     {
     case FORWARD:
         if (ultraSonic.distanceCm() < 30 || lineFinder.readSensors() != noLineDetection)
+
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
             if (ultraSonic.distanceCm() < 30)
@@ -234,7 +235,7 @@ void loop()
         autoDrive();
         previousState = AUTO;
     }
-    if (ultraSonic.distanceCm() <= 30 && previousState != AUTO)
+    if (ultraSonic.distanceCm() <= 30 && previousState != AUTO && previousState == FORWARD)
     {
         if (previousState == REVERSE)
         {
