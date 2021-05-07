@@ -20,6 +20,7 @@ int angle;
 int startPos = 0;
 float distance = 0;
 const byte noLineDetection = 3;
+const int collisionAvoidanceDistance = 10;
 
 
 void printToRpi(float distance, int angle, bool collisionAvoidance);
@@ -38,11 +39,11 @@ void autoDrive(void)
     switch (b)
     {
     case FORWARD:
-        if (ultraSonic.distanceCm() < 30 || lineFinder.readSensors() != noLineDetection)
+        if (ultraSonic.distanceCm() < collisionAvoidanceDistance || lineFinder.readSensors() != noLineDetection)
 
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-            if (ultraSonic.distanceCm() < 30)
+            if (ultraSonic.distanceCm() < collisionAvoidanceDistance)
                 printToRpi(distance, angle, true);
             else
                 printToRpi(distance, angle, false);
@@ -235,7 +236,7 @@ void loop()
         autoDrive();
         previousState = AUTO;
     }
-    if (ultraSonic.distanceCm() <= 30 && previousState != AUTO && previousState == FORWARD)
+    if (ultraSonic.distanceCm() <= collisionAvoidanceDistance && previousState != AUTO && previousState == FORWARD)
     {
         if (previousState == REVERSE)
         {
