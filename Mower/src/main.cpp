@@ -54,7 +54,6 @@ void setup()
     Serial2.begin(9600);
     gyro.begin();
 
-    
     /*char rpiReady = 'N';
     do {
         if (Serial2.available()) {
@@ -63,7 +62,6 @@ void setup()
     } while (rpiReady != 'R');
     
     Serial.println("Ready for commands");*/
-    
 
     //Set PWM 8KHz
     TCCR1A = _BV(WGM10);
@@ -107,9 +105,8 @@ void autoDrive(void)
 {
     static char autoDriveState = FORWARD;
     static int lineSensor;
-    static float wheelTurns = 0;
+    float wheelTurns = (float(Encoder_2.getCurPos() - startPos) / 360);
 
-    wheelTurns = (float(Encoder_2.getCurPos() - startPos) / 360);
     switch (autoDriveState)
     {
     case FORWARD:
@@ -120,19 +117,14 @@ void autoDrive(void)
             lineSensor = lineFinder.readSensors();
             startPos = Encoder_2.getCurPos();
         }
-        else
-        {
-            Encoder_1.setMotorPwm(-robotSpeed + 20);
-            Encoder_2.setMotorPwm(robotSpeed - 20);
-        }
-        wheelTurns = 0;
+        Encoder_1.setMotorPwm(-robotSpeed + 20);
+        Encoder_2.setMotorPwm(robotSpeed - 20);
         break;
 
     case TURN_RIGHT:
         if (wheelTurns >= 0.3)
         {
             autoDriveState = FORWARD;
-            wheelTurns = 0;
             startPos = Encoder_2.getCurPos();
         }
         Encoder_1.setMotorPwm(robotSpeed);
@@ -143,7 +135,6 @@ void autoDrive(void)
         if (wheelTurns <= -0.5)
         {
             autoDriveState = FORWARD;
-            wheelTurns = 0;
             startPos = Encoder_2.getCurPos();
         }
         Encoder_1.setMotorPwm(-robotSpeed);
@@ -160,7 +151,6 @@ void autoDrive(void)
             
             printPathToRpi(startPos, REVERSE);
             startPos = Encoder_2.getCurPos();
-            wheelTurns = 0;
         }
         Encoder_1.setMotorPwm(robotSpeed);
         Encoder_2.setMotorPwm(-robotSpeed);
@@ -176,6 +166,7 @@ void manualDrive(void) {
         case STOP:
             if (previousState == REVERSE || previousState == FORWARD)
                 printPathToRpi(startPos, previousState);
+            startPos = Encoder_2.getCurPos();
             Encoder_1.setMotorPwm(0);
             Encoder_2.setMotorPwm(0);
             previousState = STOP;
