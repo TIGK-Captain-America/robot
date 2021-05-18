@@ -22,13 +22,14 @@ int robotSpeed = 60;
 int angle;
 int startPos = 0;
 float distance = 0;
-
-
+char driveCommand = AUTO;
+char previousState = AUTO;
 
 void printToRpi(float distance, int angle, bool collisionAvoidance);
 void drive(void);
 void autoDrive(void);
-void manualDrive(char driveCommand, char previousState);
+void manualDrive();
+bool collisionAvoidance(void);
 
 void isr_process_encoder1(void)
 {
@@ -54,12 +55,23 @@ void setup()
     Serial2.begin(9600);
     gyro.begin();
 
+    /*
+    char rpiReady = n;
+    do {
+        if (Serial2.available()) {
+            rpiReady = Serial2.read();
+            Serial2.readstring();
+        }
+    } while (rpiReady != r)
+    */
+
     //Set PWM 8KHz
     TCCR1A = _BV(WGM10);
     TCCR1B = _BV(CS11) | _BV(WGM12);
 
     TCCR2A = _BV(WGM21) | _BV(WGM20);
     TCCR2B = _BV(CS21);
+
 }
 
 void loop()
@@ -71,22 +83,19 @@ void loop()
     Encoder_2.loop();
 }
 
-void drive() {
+void drive(void) {
     angle = 360 - (gyro.getAngleZ() + 180);
-    static char driveCommand = AUTO;
-    static char previousState = AUTO;
 
-    if (driveCommand == AUTO)
-    {
+    if (Serial.available()) {
+        driveCommand = Serial.read();
+        Serial.readString(); //clear
+        manualDrive();
+    }
+    else if (driveCommand == AUTO) {
         autoDrive();
         previousState = AUTO;
     }
-    else if (Serial.available()) {
-        driveCommand = Serial.read();
-        Serial.readString(); //clear
-        manualDrive(driveCommand, previousState);
-    }
-    if (ultraSonic.distanceCm() < distanceBeforeCollision && previousState != AUTO)
+    else if (collisionAvoidance())
     {
         if (previousState == REVERSE)
         {
@@ -116,13 +125,10 @@ void autoDrive(void)
     switch (b)
     {
     case FORWARD:
-        if (ultraSonic.distanceCm() < distanceBeforeCollision || lineFinder.readSensors() != noLineDetection)
+        if (collisionAvoidance() || lineFinder.readSensors() != noLineDetection)
         {
             distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
-            if (ultraSonic.distanceCm() < distanceBeforeCollision)
-                printToRpi(distance, angle, true);
-            else
-                printToRpi(distance, angle, false);
+            printToRpi(distance, angle, collisionAvoidance());
             b = REVERSE;
             lineSensor = lineFinder.readSensors();
             startPos = Encoder_2.getCurPos();
@@ -180,7 +186,7 @@ void autoDrive(void)
     }
 }
 
-void manualDrive(char driveCommand, char previousState) {
+void manualDrive(void) {
     switch (driveCommand) {
         case STOP:
             if (previousState == REVERSE)
@@ -261,6 +267,10 @@ void manualDrive(char driveCommand, char previousState) {
         default:
             break;
     }
+}
+
+bool collisionAvoidance() {
+    return ultraSonic.distanceCm() < distanceBeforeCollision;
 }
 
 void printToRpi(float distance, int angle, bool collisionAvoidance) {
