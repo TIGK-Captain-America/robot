@@ -8,18 +8,21 @@
 #define REVERSE '4'
 #define AUTO '5'
 
+const byte noLineDetection = 3;
+const int wheelDiameter = 20;
+const int distanceBeforeCollision = 15;
+
 MeEncoderOnBoard Encoder_1(SLOT1);
 MeEncoderOnBoard Encoder_2(SLOT2);
 MeLineFollower lineFinder(PORT_9);
 MeUltrasonicSensor ultraSonic(PORT_10);
 MeGyro gyro(1, 0x69);
 
-int sensorState = 0;
 int robotSpeed = 60;
 int angle;
 int startPos = 0;
 float distance = 0;
-const byte noLineDetection = 3;
+
 
 
 void printToRpi(float distance, int angle, bool collisionAvoidance);
@@ -83,17 +86,17 @@ void drive() {
         Serial.readString(); //clear
         manualDrive(driveCommand, previousState);
     }
-    if (ultraSonic.distanceCm() <= 30 && previousState != AUTO)
+    if (ultraSonic.distanceCm() < distanceBeforeCollision && previousState != AUTO)
     {
         if (previousState == REVERSE)
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20; //20 = omkrets på hjul
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
             angle = (angle + 180) % 360;
             printToRpi(distance, angle, false);
         }
         else if (previousState == FORWARD)
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
             printToRpi(distance, angle, true);
         }
         Encoder_1.setMotorPwm(0);
@@ -104,6 +107,7 @@ void drive() {
 
 void autoDrive(void)
 {
+    static int sensorState = 0;
     static char b = FORWARD;
     static int lineSensor;
     static float wheelTurns = 0;
@@ -112,10 +116,10 @@ void autoDrive(void)
     switch (b)
     {
     case FORWARD:
-        if (ultraSonic.distanceCm() < 30 || lineFinder.readSensors() != noLineDetection)
+        if (ultraSonic.distanceCm() < distanceBeforeCollision || lineFinder.readSensors() != noLineDetection)
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
-            if (ultraSonic.distanceCm() < 30)
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+            if (ultraSonic.distanceCm() < distanceBeforeCollision)
                 printToRpi(distance, angle, true);
             else
                 printToRpi(distance, angle, false);
@@ -161,7 +165,7 @@ void autoDrive(void)
             else 
                 b = TURN_LEFT;
             
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
             angle = (angle + 180) % 360;
             printToRpi(distance, angle, false);
             startPos = Encoder_2.getCurPos();
@@ -181,13 +185,13 @@ void manualDrive(char driveCommand, char previousState) {
         case STOP:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20; //20 = omkrets på hjul
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter; 
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(0);
@@ -198,7 +202,7 @@ void manualDrive(char driveCommand, char previousState) {
         case FORWARD:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
@@ -211,13 +215,13 @@ void manualDrive(char driveCommand, char previousState) {
         case TURN_RIGHT:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(robotSpeed);
@@ -228,13 +232,13 @@ void manualDrive(char driveCommand, char previousState) {
         case TURN_LEFT:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(-robotSpeed);
@@ -245,7 +249,7 @@ void manualDrive(char driveCommand, char previousState) {
         case REVERSE:
             if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
                 printToRpi(distance, angle, false);
             }
             startPos = Encoder_2.getCurPos();
