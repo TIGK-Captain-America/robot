@@ -53,6 +53,8 @@ void setup()
     Serial2.begin(9600);
     gyro.begin();
 
+    driveCommand = AUTO;
+
     /*char rpiReady = 'N';
     do {
         if (Serial2.available()) {
@@ -68,7 +70,6 @@ void setup()
 
     TCCR2A = _BV(WGM21) | _BV(WGM20);
     TCCR2B = _BV(CS21);
-
 }
 
 void loop()
