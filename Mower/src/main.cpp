@@ -32,6 +32,7 @@ bool collisionAvoidance(void);
 float calculateDistance(float startPos, float endPos);
 int calculateAngle(char direction);
 void printPathToRpi(float startPos, char direction);
+void waitForRpi(void);
 
 void isr_process_encoder1(void) {
     if (digitalRead(rightMotor.getPortB()) == 0)
@@ -48,10 +49,9 @@ void isr_process_encoder2(void) {
 }
 
 /* * * * * setup * * * * * *
- * Initiate ports.
- * Wait for RPi to start up.
+ * Initiate the mower. 
  * * * * * * * * * * * * * */
-void setup() {
+void setup(void) {
     attachInterrupt(rightMotor.getIntNum(), isr_process_encoder1, RISING);
     attachInterrupt(leftMotor.getIntNum(), isr_process_encoder2, RISING);
 
@@ -59,14 +59,7 @@ void setup() {
     Serial2.begin(9600);
     gyro.begin();
 
-    /*char rpiReady = 'N';
-    do {
-        if (Serial2.available()) {
-            rpiReady = Serial2.read();
-        }
-    } while (rpiReady != 'R');
-    
-    Serial.println("Ready for commands");*/
+    waitForRpi();
 
     //Set PWM 8KHz
     TCCR1A = _BV(WGM10);
@@ -79,7 +72,7 @@ void setup() {
 /* * * * loop * * * *
  * Handle driving.
  * * * * * * * * * */
-void loop() {
+void loop(void) {
     gyro.update();
     
     manualDrive();
@@ -214,7 +207,7 @@ void setMotorSpeed(int rightMotorSpeed, int leftMotorSpeed) {
 /* * * * * collisionAvoidance * * * * * *
  * Checks if collision avoidance occurs.
  * * * * * * * * * * * * * * * * * * * */
-bool collisionAvoidance() {
+bool collisionAvoidance(void) {
     return ultraSonic.distanceCm() < distanceBeforeCollision;
 }
 
@@ -250,4 +243,18 @@ void printPathToRpi(float startPos, char direction) {
         Serial2.print("T");
     else
         Serial2.print("F");
+}
+
+/* * * * * waitForRpi * * * * * *
+ * Wait for the RPi to be ready.
+ * * * * * * * * * * * * * * * */
+void waitForRpi(void) {
+    char rpiReady = 'N';
+    do {
+        if (Serial2.available()) {
+            rpiReady = Serial2.read();
+        }
+    } while (rpiReady != 'R');
+    
+    Serial.println("Ready for commands");
 }
