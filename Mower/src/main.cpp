@@ -9,7 +9,6 @@
 #define AUTO '5'
 
 const byte noLineDetection = 3;
-const int wheelDiameter = 20;
 const int distanceBeforeCollision = 15;
 
 MeEncoderOnBoard Encoder_1(SLOT1);
@@ -19,7 +18,7 @@ MeUltrasonicSensor ultraSonic(PORT_10);
 MeGyro gyro(1, 0x69);
 
 int robotSpeed = 60;
-int startPos = 0;
+float startPos = 0;
 char driveCommand = AUTO;
 char previousState = AUTO;
 
@@ -29,7 +28,7 @@ void manualDrive(void);
 bool collisionAvoidance(void);
 float calculateDistance(float startPos, float endPos);
 int calculateAngle(char direction);
-void printToRpi(float distance, int angle, bool collisionAvoidance);
+void printPathToRpi(float startPos, char direction);
 
 void isr_process_encoder1(void)
 {
@@ -97,7 +96,7 @@ void drive(void) {
     }
     else if (collisionAvoidance() && previousState == FORWARD)
     {
-        printToRpi(calculateDistance(startPos, Encoder_2.getCurPos()), calculateAngle(FORWARD), true);
+        printPathToRpi(startPos, FORWARD);
         Encoder_1.setMotorPwm(0);
         Encoder_2.setMotorPwm(0);
         previousState = STOP;
@@ -106,18 +105,18 @@ void drive(void) {
 
 void autoDrive(void)
 {
-    static char b = FORWARD;
+    static char autoDriveState = FORWARD;
     static int lineSensor;
     static float wheelTurns = 0;
 
     wheelTurns = (float(Encoder_2.getCurPos() - startPos) / 360);
-    switch (b)
+    switch (autoDriveState)
     {
     case FORWARD:
         if (collisionAvoidance() || lineFinder.readSensors() != noLineDetection)
         {
-            printToRpi(calculateDistance(startPos, Encoder_2.getCurPos()), calculateAngle(FORWARD), collisionAvoidance());
-            b = REVERSE;
+            printPathToRpi(startPos, FORWARD);
+            autoDriveState = REVERSE;
             lineSensor = lineFinder.readSensors();
             startPos = Encoder_2.getCurPos();
         }
@@ -132,7 +131,7 @@ void autoDrive(void)
     case TURN_RIGHT:
         if (wheelTurns >= 0.3)
         {
-            b = FORWARD;
+            autoDriveState = FORWARD;
             wheelTurns = 0;
             startPos = Encoder_2.getCurPos();
         }
@@ -143,7 +142,7 @@ void autoDrive(void)
     case TURN_LEFT:
         if (wheelTurns <= -0.5)
         {
-            b = FORWARD;
+            autoDriveState = FORWARD;
             wheelTurns = 0;
             startPos = Encoder_2.getCurPos();
         }
@@ -155,11 +154,11 @@ void autoDrive(void)
         if (wheelTurns <= -1 || (lineFinder.readSensors() != noLineDetection && wheelTurns <= -0.5))
         {
             if (lineSensor == 1) 
-                b = TURN_RIGHT;
+                autoDriveState = TURN_RIGHT;
             else 
-                b = TURN_LEFT;
+                autoDriveState = TURN_LEFT;
             
-            printToRpi(calculateDistance(startPos, Encoder_2.getCurPos()), calculateAngle(REVERSE), false);
+            printPathToRpi(startPos, REVERSE);
             startPos = Encoder_2.getCurPos();
             wheelTurns = 0;
         }
@@ -176,7 +175,7 @@ void manualDrive(void) {
     switch (driveCommand) {
         case STOP:
             if (previousState == REVERSE || previousState == FORWARD)
-                printToRpi(calculateDistance(startPos, Encoder_2.getCurPos()), calculateAngle(previousState), false);
+                printPathToRpi(startPos, previousState);
             Encoder_1.setMotorPwm(0);
             Encoder_2.setMotorPwm(0);
             previousState = STOP;
@@ -184,7 +183,7 @@ void manualDrive(void) {
 
         case FORWARD:
             if (previousState == REVERSE)
-                printToRpi(calculateDistance(startPos, Encoder_2.getCurPos()), calculateAngle(REVERSE), false);
+                printPathToRpi(startPos, REVERSE);
             startPos = Encoder_2.getCurPos();
             Encoder_1.setMotorPwm(-robotSpeed);
             Encoder_2.setMotorPwm(robotSpeed);
@@ -193,7 +192,7 @@ void manualDrive(void) {
 
         case TURN_RIGHT:
             if (previousState == REVERSE || previousState == FORWARD)
-                printToRpi(calculateDistance(startPos, Encoder_2.getCurPos()), calculateAngle(previousState), false);
+                printPathToRpi(startPos, previousState);
             Encoder_1.setMotorPwm(robotSpeed);
             Encoder_2.setMotorPwm(robotSpeed);
             previousState = TURN_RIGHT;
@@ -201,7 +200,7 @@ void manualDrive(void) {
 
         case TURN_LEFT:
             if (previousState == REVERSE || previousState == FORWARD)
-                printToRpi(calculateDistance(startPos, Encoder_2.getCurPos()), calculateAngle(previousState), false);
+                printPathToRpi(startPos, previousState);
             Encoder_1.setMotorPwm(-robotSpeed);
             Encoder_2.setMotorPwm(-robotSpeed);
             previousState = TURN_LEFT;
@@ -209,7 +208,7 @@ void manualDrive(void) {
 
         case REVERSE:
             if (previousState == FORWARD)
-                printToRpi(calculateDistance(startPos, Encoder_2.getCurPos()), calculateAngle(FORWARD), false);
+                printPathToRpi(startPos, FORWARD);
             startPos = Encoder_2.getCurPos();
             Encoder_1.setMotorPwm(robotSpeed);
             Encoder_2.setMotorPwm(-robotSpeed);
@@ -225,10 +224,10 @@ bool collisionAvoidance() {
     return ultraSonic.distanceCm() < distanceBeforeCollision;
 }
 
-float calculateDistance(float startPos, float endPos) {
-    return (float(endPos - startPos) / 360) * wheelDiameter;
+float calculateDistance(float startPos, float currentPos) {
+    int wheelDiameter = 20;
+    return (float(currentPos - startPos) / 360) * wheelDiameter;
 }
-
 
 int calculateAngle(char direction) {
     int forwardAngle = 360 - (gyro.getAngleZ() + 180);
@@ -239,12 +238,12 @@ int calculateAngle(char direction) {
         return (forwardAngle + 180) % 360;
 }
 
-void printToRpi(float distance, int angle, bool collisionAvoidance) {
-    Serial2.print(distance);
+void printPathToRpi(float startPos, char direction) {
+    Serial2.print(calculateDistance(startPos, Encoder_2.getCurPos()));
     Serial2.print(",");
-    Serial2.print(angle);
+    Serial2.print(calculateAngle(direction));
     Serial2.print(",");
-    if (collisionAvoidance)
+    if (collisionAvoidance() && direction == FORWARD)
         Serial2.print("T");
     else
         Serial2.print("F");
