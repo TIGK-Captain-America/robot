@@ -20,11 +20,87 @@ int angle;
 int startPos = 0;
 float distance = 0;
 const byte noLineDetection = 3;
-const int collisionAvoidanceDistance = 10;
-const int wheelDiameter = 20;
 
 
 void printToRpi(float distance, int angle, bool collisionAvoidance);
+void drive(void);
+void autoDrive(void);
+void manualDrive(char driveCommand, char previousState);
+
+void isr_process_encoder1(void)
+{
+    if (digitalRead(Encoder_1.getPortB()) == 0)
+        Encoder_1.pulsePosMinus();
+    else
+        Encoder_1.pulsePosPlus();
+}
+
+void isr_process_encoder2(void)
+{
+    if (digitalRead(Encoder_2.getPortB()) == 0)
+        Encoder_2.pulsePosMinus();
+    else
+        Encoder_2.pulsePosPlus();
+}
+
+void setup()
+{
+    attachInterrupt(Encoder_1.getIntNum(), isr_process_encoder1, RISING);
+    attachInterrupt(Encoder_2.getIntNum(), isr_process_encoder2, RISING);
+    Serial.begin(115200);
+    Serial2.begin(9600);
+    gyro.begin();
+
+    //Set PWM 8KHz
+    TCCR1A = _BV(WGM10);
+    TCCR1B = _BV(CS11) | _BV(WGM12);
+
+    TCCR2A = _BV(WGM21) | _BV(WGM20);
+    TCCR2B = _BV(CS21);
+}
+
+void loop()
+{
+    gyro.update();
+    drive();
+
+    Encoder_1.loop();
+    Encoder_2.loop();
+}
+
+void drive() {
+    angle = 360 - (gyro.getAngleZ() + 180);
+    static char driveCommand = AUTO;
+    static char previousState = AUTO;
+
+    if (driveCommand == AUTO)
+    {
+        autoDrive();
+        previousState = AUTO;
+    }
+    else if (Serial.available()) {
+        driveCommand = Serial.read();
+        Serial.readString(); //clear
+        manualDrive(driveCommand, previousState);
+    }
+    if (ultraSonic.distanceCm() <= 30 && previousState != AUTO)
+    {
+        if (previousState == REVERSE)
+        {
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20; //20 = omkrets på hjul
+            angle = (angle + 180) % 360;
+            printToRpi(distance, angle, false);
+        }
+        else if (previousState == FORWARD)
+        {
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+            printToRpi(distance, angle, true);
+        }
+        Encoder_1.setMotorPwm(0);
+        Encoder_2.setMotorPwm(0);
+        previousState = STOP;
+    }
+}
 
 void autoDrive(void)
 {
@@ -36,11 +112,10 @@ void autoDrive(void)
     switch (b)
     {
     case FORWARD:
-        if (ultraSonic.distanceCm() < collisionAvoidanceDistance || lineFinder.readSensors() != noLineDetection)
-
+        if (ultraSonic.distanceCm() < 30 || lineFinder.readSensors() != noLineDetection)
         {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
-            if (ultraSonic.distanceCm() < collisionAvoidanceDistance)
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
+            if (ultraSonic.distanceCm() < 30)
                 printToRpi(distance, angle, true);
             else
                 printToRpi(distance, angle, false);
@@ -86,7 +161,7 @@ void autoDrive(void)
             else 
                 b = TURN_LEFT;
             
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
             angle = (angle + 180) % 360;
             printToRpi(distance, angle, false);
             startPos = Encoder_2.getCurPos();
@@ -101,62 +176,18 @@ void autoDrive(void)
     }
 }
 
-void isr_process_encoder1(void)
-{
-    if (digitalRead(Encoder_1.getPortB()) == 0)
-        Encoder_1.pulsePosMinus();
-    else
-        Encoder_1.pulsePosPlus();
-}
-
-void isr_process_encoder2(void)
-{
-    if (digitalRead(Encoder_2.getPortB()) == 0)
-        Encoder_2.pulsePosMinus();
-    else
-        Encoder_2.pulsePosPlus();
-}
-
-void setup()
-{
-    attachInterrupt(Encoder_1.getIntNum(), isr_process_encoder1, RISING);
-    attachInterrupt(Encoder_2.getIntNum(), isr_process_encoder2, RISING);
-    Serial.begin(115200);
-    Serial2.begin(9600);
-    gyro.begin();
-
-    //Set PWM 8KHz
-    TCCR1A = _BV(WGM10);
-    TCCR1B = _BV(CS11) | _BV(WGM12);
-
-    TCCR2A = _BV(WGM21) | _BV(WGM20);
-    TCCR2B = _BV(CS21);
-}
-
-void loop()
-{
-    gyro.update();
-    angle = 360 - (gyro.getAngleZ() + 180);
-    static char a;
-    static char previousState;
-
-    if (Serial.available())
-    {
-        a = Serial.read();
-        Serial.readString();
-
-        switch (a)
-        {
+void manualDrive(char driveCommand, char previousState) {
+    switch (driveCommand) {
         case STOP:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter; 
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20; //20 = omkrets på hjul
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(0);
@@ -167,7 +198,7 @@ void loop()
         case FORWARD:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
@@ -180,13 +211,13 @@ void loop()
         case TURN_RIGHT:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(robotSpeed);
@@ -197,13 +228,13 @@ void loop()
         case TURN_LEFT:
             if (previousState == REVERSE)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 angle = (angle + 180) % 360;
                 printToRpi(distance, angle, false);
             }
             else if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 printToRpi(distance, angle, false);
             }
             Encoder_1.setMotorPwm(-robotSpeed);
@@ -214,7 +245,7 @@ void loop()
         case REVERSE:
             if (previousState == FORWARD)
             {
-                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
+                distance = (float(Encoder_2.getCurPos() - startPos) / 360) * 20;
                 printToRpi(distance, angle, false);
             }
             startPos = Encoder_2.getCurPos();
@@ -225,34 +256,7 @@ void loop()
 
         default:
             break;
-        }
     }
-
-    if (a == AUTO)
-    {
-        autoDrive();
-        previousState = AUTO;
-    }
-    if (ultraSonic.distanceCm() <= collisionAvoidanceDistance && previousState != AUTO && previousState == FORWARD)
-    {
-        if (previousState == REVERSE)
-        {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter; 
-            angle = (angle + 180) % 360;
-            printToRpi(distance, angle, false);
-        }
-        else if (previousState == FORWARD)
-        {
-            distance = (float(Encoder_2.getCurPos() - startPos) / 360) * wheelDiameter;
-            printToRpi(distance, angle, true);
-        }
-        Encoder_1.setMotorPwm(0);
-        Encoder_2.setMotorPwm(0);
-        previousState = STOP;
-    }
-
-    Encoder_1.loop();
-    Encoder_2.loop();
 }
 
 void printToRpi(float distance, int angle, bool collisionAvoidance) {
