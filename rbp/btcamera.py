@@ -19,19 +19,19 @@ while True:
     sleep(0.03)
     data_left = ser.inWaiting()             #check for remaining byte
     received_data += ser.read(data_left)
-    print (received_data)                   #print received data
-    sendDataString = {"stringFromRbp": received_data}
-    sendData(sendDataString)
+    print (received_data)                   #print received data    
     if chr(received_data[-1]) == 'T':
         with picamera.PiCamera() as camera:
             camera.resolution = (1024, 768)
             camera.start_preview()
-            # Camera warm-up time
-#             time.sleep()
-            camera.capture('test.jpg')
+            #Camera warm-up time
+            #time.sleep()
+            camera.capture('/home/pi/Desktop/robot/rbp/test.jpg')
+        sendDataString = {"stringFromRbp": received_data}
+        sendData(sendDataString)
     elif chr(received_data[-1]) == 'F':
-        
-        print("tjo")
+        sendDataString = {"stringFromRbp": received_data}
+        sendData(sendDataString)
     else:
-        print("fel")
+        print("error")
         
