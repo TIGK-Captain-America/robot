@@ -20,7 +20,6 @@ MeGyro gyro(1, 0x69);
 int robotSpeed = 60;
 float startPos = 0;
 char driveCommand = AUTO;
-char previousState = AUTO;
 
 void autoDrive(void);
 void manualDrive(void);
@@ -79,7 +78,6 @@ void loop()
     manualDrive();
     if (driveCommand == AUTO) {
         autoDrive();
-        previousState = AUTO;
     }
 
     rightMotor.loop();
@@ -143,6 +141,8 @@ void autoDrive(void)
 }
 
 void manualDrive(void) {
+    static char previousState = AUTO;
+
     if (Serial.available()) {
         driveCommand = Serial.read();
         Serial.readString(); //clear
@@ -194,7 +194,6 @@ void manualDrive(void) {
         setMotorSpeed(0, 0);
         previousState = STOP;
     }
-    
 }
 
 void setMotorSpeed(int rightMotorSpeed, int leftMotorSpeed) {
