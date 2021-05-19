@@ -215,8 +215,8 @@ bool collisionAvoidance(void) {
  * Calculates distance between startPos and currentPos.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 float calculateDistance(float startPos, float currentPos) {
-    int wheelDiameter = 20;
-    return (float(currentPos - startPos) / 360) * wheelDiameter;
+    int wheelCircumference = 20;
+    return (float(currentPos - startPos) / 360) * wheelCircumference;
 }
 
 /* * * * * * * calculateAngle * * * * * * * *
