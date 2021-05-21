@@ -12,12 +12,18 @@
 
 /* * * * * * * CONSTANTS * * * * * * */
 const byte noLineDetection = 3;
-const int distanceBeforeCollision = 15;
+const byte collisionDistanceCm15 = 15;
+const byte collisionDistanceCm30 = 30;
+const byte collisionDistanceCm45 = 45;
+const byte ultraSonicDifferenceCm = 2;
 const int robotSpeed = 60;
 
 /* * * * * GLOBAL VARIABLES * * * * */
 float startPos = 0;
-char driveCommand = AUTO;
+byte previousUltraSensorValue = 0;
+char driveCommand = AUTO; //AUTO is standard, STOP when testing
+bool flagUltraSonicCm30 = false;
+bool flagUltraSonicCm45 = false;
 MeEncoderOnBoard rightMotor(SLOT1);
 MeEncoderOnBoard leftMotor(SLOT2);
 MeLineFollower lineFinder(PORT_9);
@@ -29,9 +35,9 @@ void autoDrive(void);
 void manualDrive(void);
 void setMotorSpeed(int rightMotorSpeed, int leftMotorSpeed);
 bool collisionAvoidance(void);
-float calculateDistance(float startPos, float endPos);
+float calculateDistance();
 int calculateAngle(char direction);
-void printPathToRpi(float startPos, char direction);
+void printPathToRpi(char direction);
 void waitForRpi(void);
 
 void isr_process_encoder1(void) {
@@ -56,7 +62,7 @@ void setup(void) {
     attachInterrupt(leftMotor.getIntNum(), isr_process_encoder2, RISING);
 
     Serial.begin(115200);
-    Serial2.begin(9600);
+    Serial2.begin(115200);
     gyro.begin();
 
     waitForRpi();
@@ -95,10 +101,23 @@ void autoDrive(void) {
     switch (autoDriveState) {
         case FORWARD:
             if (collisionAvoidance() || lineFinder.readSensors() != noLineDetection) {
-                printPathToRpi(startPos, FORWARD);
+                printPathToRpi(FORWARD);
                 autoDriveState = REVERSE;
                 lineSensor = lineFinder.readSensors();
-                startPos = leftMotor.getCurPos();
+                flagUltraSonicCm30 = false;
+                flagUltraSonicCm45 = false;
+            }
+            else if (ultraSonic.distanceCm() >= collisionDistanceCm30 
+                    && ultraSonic.distanceCm() <= collisionDistanceCm30 + ultraSonicDifferenceCm
+                    && flagUltraSonicCm30 == false){
+                printPathToRpi(FORWARD);
+                flagUltraSonicCm30 = true;
+            }
+            else if (ultraSonic.distanceCm() >= collisionDistanceCm45 
+                    && ultraSonic.distanceCm() <= collisionDistanceCm45 + ultraSonicDifferenceCm
+                    && flagUltraSonicCm45 == false){
+                printPathToRpi(FORWARD);
+                flagUltraSonicCm45 = true;
             }
             setMotorSpeed(-robotSpeed + 20, robotSpeed - 20);
             break;
@@ -126,8 +145,7 @@ void autoDrive(void) {
                 else 
                     autoDriveState = TURN_LEFT;
                 
-                printPathToRpi(startPos, REVERSE);
-                startPos = leftMotor.getCurPos();
+                printPathToRpi(REVERSE);
             }
             setMotorSpeed(robotSpeed, -robotSpeed);
             break;
@@ -149,7 +167,7 @@ void manualDrive(void) {
         switch (driveCommand) {
             case STOP:
                 if (previousState == REVERSE || previousState == FORWARD)
-                    printPathToRpi(startPos, previousState);
+                    printPathToRpi(previousState);
                 startPos = leftMotor.getCurPos();
                 setMotorSpeed(0, 0);
                 previousState = STOP;
@@ -157,7 +175,7 @@ void manualDrive(void) {
 
             case FORWARD:
                 if (previousState == REVERSE)
-                    printPathToRpi(startPos, REVERSE);
+                    printPathToRpi(previousState);
                 startPos = leftMotor.getCurPos();
                 setMotorSpeed(-robotSpeed, robotSpeed);
                 previousState = FORWARD;
@@ -165,34 +183,56 @@ void manualDrive(void) {
 
             case TURN_RIGHT:
                 if (previousState == REVERSE || previousState == FORWARD)
-                    printPathToRpi(startPos, previousState);
+                    printPathToRpi(previousState);
                 setMotorSpeed(robotSpeed, robotSpeed);
                 previousState = TURN_RIGHT;
                 break;
 
             case TURN_LEFT:
                 if (previousState == REVERSE || previousState == FORWARD)
-                    printPathToRpi(startPos, previousState);
+                    printPathToRpi(previousState);
                 setMotorSpeed(-robotSpeed, -robotSpeed);
                 previousState = TURN_LEFT;
                 break;
 
             case REVERSE:
                 if (previousState == FORWARD)
-                    printPathToRpi(startPos, FORWARD);
+                    printPathToRpi(previousState);
                 startPos = leftMotor.getCurPos();
                 setMotorSpeed(robotSpeed, -robotSpeed);
                 previousState = REVERSE;
+                break;
+
+            case AUTO:
+                previousState = AUTO;
                 break;
 
             default:
                 break;
         }
     }
-    else if (collisionAvoidance() && previousState == FORWARD) {
-        printPathToRpi(startPos, FORWARD);
-        setMotorSpeed(0, 0);
-        previousState = STOP;
+    else if (previousState == FORWARD){
+        if (collisionAvoidance()) {
+            printPathToRpi(previousState);
+            setMotorSpeed(0, 0);
+            previousState = STOP;
+        }
+        else if (ultraSonic.distanceCm() >= collisionDistanceCm30 
+                && ultraSonic.distanceCm() <= collisionDistanceCm30 + ultraSonicDifferenceCm
+                && flagUltraSonicCm30 == false){
+            printPathToRpi(previousState);
+            flagUltraSonicCm30 = true;
+        }
+        else if(ultraSonic.distanceCm() >= collisionDistanceCm45 
+                && ultraSonic.distanceCm() <= collisionDistanceCm45 + ultraSonicDifferenceCm
+                && flagUltraSonicCm45 == false){
+            printPathToRpi(previousState);
+            flagUltraSonicCm45 = true;
+        }
+    }
+    else if (previousState != AUTO){
+        flagUltraSonicCm30 = false;
+        flagUltraSonicCm45 = false;
     }
 }
 
@@ -208,15 +248,17 @@ void setMotorSpeed(int rightMotorSpeed, int leftMotorSpeed) {
  * Checks if collision avoidance occurs.
  * * * * * * * * * * * * * * * * * * * */
 bool collisionAvoidance(void) {
-    return ultraSonic.distanceCm() < distanceBeforeCollision;
+    return ultraSonic.distanceCm() < collisionDistanceCm15;
 }
 
 /* * * * * * * * calculateDistance * * * * * * * * * * *
  * Calculates distance between startPos and currentPos.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-float calculateDistance(float startPos, float currentPos) {
+float calculateDistance() {
     int wheelCircumference = 20;
-    return (float(currentPos - startPos) / 360) * wheelCircumference;
+    float distance = (float(leftMotor.getCurPos() - startPos) / 360) * wheelCircumference;
+    startPos = leftMotor.getCurPos();
+    return distance;
 }
 
 /* * * * * * * calculateAngle * * * * * * * *
@@ -234,15 +276,13 @@ int calculateAngle(char direction) {
 /* * * * * * * * * * * printPathToRpi * * * * * * * * * * * * * * * 
  * Prints distance, angle and if collision avoidance occurs to RPi.
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-void printPathToRpi(float startPos, char direction) {
-    Serial2.print(calculateDistance(startPos, leftMotor.getCurPos()));
-    Serial2.print(",");
-    Serial2.print(calculateAngle(direction));
-    Serial2.print(",");
+void printPathToRpi(char direction) {
+    String s = "";
     if (collisionAvoidance() && direction == FORWARD)
-        Serial2.print("T");
+        s = (String)calculateDistance() + "," + (String)calculateAngle(direction) + "," + (String)ultraSonic.distanceCm() + "," + "T";
     else
-        Serial2.print("F");
+        s = (String)calculateDistance() + "," + (String)calculateAngle(direction) + "," + (String)ultraSonic.distanceCm() + "," + "F";
+    Serial2.print(s);
 }
 
 /* * * * * waitForRpi * * * * * *
@@ -251,10 +291,10 @@ void printPathToRpi(float startPos, char direction) {
 void waitForRpi(void) {
     char rpiReady = 'N';
     do {
+        Serial2.print("R");
         if (Serial2.available()) {
             rpiReady = Serial2.read();
         }
-    } while (rpiReady != 'R');
-    
-    Serial.println("Ready for commands");
+        delay(500);
+    } while (rpiReady != 'R'); 
 }
