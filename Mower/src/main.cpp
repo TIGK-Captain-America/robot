@@ -90,9 +90,16 @@ void loop(void) {
     leftMotor.loop();
 }
 
-/* * * * * * * autoDrive * * * * * * * *
+/* * * * * * * * * * * * autoDrive * * * * * * * * * * * * * * *
  * State machine to drive autonomously.
- * * * * * * * * * * * * * * * * * * * */
+ * Connected to the high level requirements #M1.1 and #M1.2
+ * And the low level requirements:
+ * - Enable driving in all directions
+ * - Connect and test line follower sensor
+ * - Get the mower to detect line and turn
+ * - Connect and test ultrasonic sensor
+ * - Get mower to detect object in front of it and turn away
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 void autoDrive(void) {
     static char autoDriveState = FORWARD;
     static int lineSensor;
@@ -119,6 +126,7 @@ void autoDrive(void) {
                 printPathToRpi(FORWARD);
                 flagUltraSonicCm45 = true;
             }
+            //Drive slower to get line follower sensor to detect line
             setMotorSpeed(-robotSpeed + 20, robotSpeed - 20);
             break;
 
@@ -157,6 +165,10 @@ void autoDrive(void) {
 
 /* * * * * * * * * manualDrive * * * * * * * * * * * * *
  * Handle incoming commands from app to manually drive.
+ * Connected to the high level requirement #M1.3
+ * And the low level requirements:
+ * - Setup and receive commands to robot via BT
+ * - Handle incoming drive commands from app
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 void manualDrive(void) {
     static char previousState = AUTO;
@@ -253,6 +265,8 @@ bool collisionAvoidance(void) {
 
 /* * * * * * * * calculateDistance * * * * * * * * * * *
  * Calculates distance between startPos and currentPos.
+ * Connected to the low level requirements
+ * - Handle robot position
  * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 float calculateDistance() {
     int wheelCircumference = 20;
@@ -263,6 +277,8 @@ float calculateDistance() {
 
 /* * * * * * * calculateAngle * * * * * * * *
  * Calculates angle depending on direction.
+ * Connected to the low level requirements
+ * - Handle robot position
  * * * * * * * * * * * * * * * * * * * * * */
 int calculateAngle(char direction) {
     int forwardAngle = 360 - (gyro.getAngleZ() + 180);
@@ -275,6 +291,10 @@ int calculateAngle(char direction) {
 
 /* * * * * * * * * * * printPathToRpi * * * * * * * * * * * * * * * 
  * Prints distance, angle and if collision avoidance occurs to RPi.
+ * Connected to the high level requirement #M1.4
+ * And the low level requirements
+ * - Handle robot position
+ * - Send position to backend
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 void printPathToRpi(char direction) {
     String s = "";
