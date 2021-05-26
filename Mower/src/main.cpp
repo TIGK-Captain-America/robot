@@ -109,6 +109,8 @@ void autoDrive(void) {
         case FORWARD:
             if (collisionAvoidance() || lineFinder.readSensors() != noLineDetection) {
                 printPathToRpi(FORWARD);
+                if (collisionAvoidance())
+                    Serial.print((int)ultraSonic.distanceCm());
                 autoDriveState = REVERSE;
                 lineSensor = lineFinder.readSensors();
                 flagUltraSonicCm30 = false;
@@ -117,13 +119,13 @@ void autoDrive(void) {
             else if (ultraSonic.distanceCm() >= collisionDistanceCm30 
                     && ultraSonic.distanceCm() <= collisionDistanceCm30 + ultraSonicDifferenceCm
                     && flagUltraSonicCm30 == false){
-                printPathToRpi(FORWARD);
+                Serial.print((int)ultraSonic.distanceCm());
                 flagUltraSonicCm30 = true;
             }
             else if (ultraSonic.distanceCm() >= collisionDistanceCm45 
                     && ultraSonic.distanceCm() <= collisionDistanceCm45 + ultraSonicDifferenceCm
                     && flagUltraSonicCm45 == false){
-                printPathToRpi(FORWARD);
+                Serial.print((int)ultraSonic.distanceCm());
                 flagUltraSonicCm45 = true;
             }
             //Drive slower to get line follower sensor to detect line
@@ -226,19 +228,20 @@ void manualDrive(void) {
     else if (previousState == FORWARD){
         if (collisionAvoidance()) {
             printPathToRpi(previousState);
+            Serial.print((int)ultraSonic.distanceCm());
             setMotorSpeed(0, 0);
             previousState = STOP;
         }
         else if (ultraSonic.distanceCm() >= collisionDistanceCm30 
                 && ultraSonic.distanceCm() <= collisionDistanceCm30 + ultraSonicDifferenceCm
                 && flagUltraSonicCm30 == false){
-            printPathToRpi(previousState);
+            Serial.print((int)ultraSonic.distanceCm());
             flagUltraSonicCm30 = true;
         }
         else if(ultraSonic.distanceCm() >= collisionDistanceCm45 
                 && ultraSonic.distanceCm() <= collisionDistanceCm45 + ultraSonicDifferenceCm
                 && flagUltraSonicCm45 == false){
-            printPathToRpi(previousState);
+            Serial.print((int)ultraSonic.distanceCm());
             flagUltraSonicCm45 = true;
         }
     }
