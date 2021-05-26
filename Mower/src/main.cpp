@@ -64,7 +64,6 @@ void setup(void) {
     Serial.begin(115200);
     Serial2.begin(115200);
     gyro.begin();
-
     waitForRpi();
 
     //Set PWM 8KHz
@@ -80,7 +79,6 @@ void setup(void) {
  * * * * * * * * * */
 void loop(void) {
     gyro.update();
-    
     manualDrive();
     if (driveCommand == AUTO) {
         autoDrive();
@@ -133,7 +131,7 @@ void autoDrive(void) {
             break;
 
         case TURN_RIGHT:
-            if (wheelTurns >= 0.3) {
+            if (wheelTurns >= (0.3)) { 
                 autoDriveState = FORWARD;
                 startPos = leftMotor.getCurPos();
             }
@@ -141,7 +139,7 @@ void autoDrive(void) {
             break;
 
         case TURN_LEFT:
-            if (wheelTurns <= -0.5) {
+            if (wheelTurns <= (-0.5)) { 
                 autoDriveState = FORWARD;
                 startPos = leftMotor.getCurPos();
             }
@@ -149,8 +147,8 @@ void autoDrive(void) {
             break;
 
         case REVERSE:
-            if (wheelTurns <= -1 || (lineFinder.readSensors() != noLineDetection && wheelTurns <= -0.5)) {
-                if (lineSensor == 1) 
+            if (wheelTurns <= -0.5 || (lineFinder.readSensors() != noLineDetection && wheelTurns <= -0.1)) {
+                if (lineSensor == 1) //lineSensor 1 == left sensor, 2 == right sensor, 3 == no line
                     autoDriveState = TURN_RIGHT;
                 else 
                     autoDriveState = TURN_LEFT;
@@ -275,7 +273,7 @@ float calculateDistance() {
     int wheelCircumference = 20;
     float distance = (float(leftMotor.getCurPos() - startPos) / 360) * wheelCircumference;
     startPos = leftMotor.getCurPos();
-    return distance;
+    return abs(distance);
 }
 
 /* * * * * * * calculateAngle * * * * * * * *
